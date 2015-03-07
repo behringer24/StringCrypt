@@ -6,19 +6,24 @@ length in JAVA/Android. The String is encryped by symmetric DESede algorithm and
 session key is encrypted by RSA. The encrypted message and the symmetric key are packaged and can
 be exported as base64 encoded string or byte array.
 
+The recipient can then decrypt the symmetric key with his private key and use the symmetric key to
+decrypt the message.
+
 ## Usage
 ```java
- StringCrypt crypt = new StringCrypt();
+StringCrypt crypt = new StringCrypt();
 
- KeyPair kp = crypt.createKeyPair();
- Key privateKey = kp.getPrivate();
- Key publicKey = kp.getPublic();
+KeyPair kp = crypt.createKeyPair();
+Key privateKey = kp.getPrivate();
+Key publicKey = kp.getPublic();
 
- CryptPackage cryptPackage = crypt.encrypt(message, publicKey);
- String packageString = cryptPackage.toString();
- // Do something with packageString, eg network transmit
- CryptPackage newPackage = new CryptPackage(packageString);
- String decryptedString = crypt.decrypt(newPackage, privateKey);
+CryptPackage cryptPackage = crypt.encrypt(message, publicKey);
+String packageString = cryptPackage.toString();
+
+// Do something with packageString, eg transmit over network
+
+CryptPackage newPackage = new CryptPackage(packageString);
+String decryptedString = crypt.decrypt(newPackage, privateKey);
 ```
 
 ## Credits
