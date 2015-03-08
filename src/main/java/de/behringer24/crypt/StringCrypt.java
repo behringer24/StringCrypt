@@ -1,12 +1,17 @@
 package de.behringer24.crypt;
 
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESedeKeySpec;
@@ -39,7 +44,7 @@ public class StringCrypt {
      * @param publicKey
      * @return CryptPackage
      */
-    public CryptPackage encrypt(String message, Key publicKey) {
+    public CryptPackage encrypt(String message, Key publicKey) throws StringCryptException {
         byte[] inputBytes = message.getBytes();
         byte[] encryptedMessage = null;
         byte[] encryptedSymmetricKey = null;
@@ -50,13 +55,33 @@ public class StringCrypt {
             Cipher publicKeyCipher = Cipher.getInstance(PKALGORITHM);
             publicKeyCipher.init(Cipher.ENCRYPT_MODE, publicKey);
             encryptedSymmetricKey = publicKeyCipher.doFinal(getRawKey(sessionKey));
+        } catch (NoSuchAlgorithmException e) {
+            throw new StringCryptException("Public key algorithm " + PKALGORITHM + " not available. " + e.getMessage());
+        } catch (NoSuchPaddingException e) {
+            throw new StringCryptException("Padding algorithm " + PKALGORITHM + " not available. " + e.getMessage());
+        } catch (InvalidKeyException e) {
+            throw new StringCryptException("Invalid public key. " + e.getMessage());
+        } catch (IllegalBlockSizeException e) {
+            throw new StringCryptException("Invalid block size. " + e.getMessage());
+        } catch (BadPaddingException e) {
+            throw new StringCryptException("Bad padding. " + e.getMessage());
+        }
 
+        try {
             // encrypt message with session key
             Cipher symmetricCipher = Cipher.getInstance(SKALGORITHM);
             symmetricCipher.init(Cipher.ENCRYPT_MODE, sessionKey);
             encryptedMessage = symmetricCipher.doFinal(inputBytes);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            throw new StringCryptException("Symmetric crypto algorithm " + PKALGORITHM + " not available");
+        } catch (NoSuchPaddingException e) {
+            throw new StringCryptException("Padding algorithm " + PKALGORITHM + " not available");
+        } catch (InvalidKeyException e) {
+            throw new StringCryptException("Invalid public key. " + e.getMessage());
+        } catch (IllegalBlockSizeException e) {
+            throw new StringCryptException("Invalid block size. " + e.getMessage());
+        } catch (BadPaddingException e) {
+            throw new StringCryptException("Bad padding. " + e.getMessage());
         }
 
         return new CryptPackage(encryptedMessage, encryptedSymmetricKey);
@@ -68,23 +93,44 @@ public class StringCrypt {
      * @param privateKey
      * @return String
      */
-    public String decrypt(CryptPackage cryptPackage, Key privateKey) {
+    public String decrypt(CryptPackage cryptPackage, Key privateKey) throws StringCryptException {
         String decrypedString = null;
+        SecretKey symmetricKey = null;
 
+        // decrypt symmetric session key with private key
         try {
-            // decrypt symmetric session key with private key
             Cipher publicKeyCipher = Cipher.getInstance(PKALGORITHM);
             publicKeyCipher.init(Cipher.DECRYPT_MODE, privateKey);
             byte[] rawKey = publicKeyCipher.doFinal(cryptPackage.getEncryptedSymmetricKey());
-            SecretKey symmetricKey = generateKey(rawKey);
+            symmetricKey = generateKey(rawKey);
+        } catch (NoSuchAlgorithmException e) {
+            throw new StringCryptException("Public key algorithm " + PKALGORITHM + " not available. " + e.getMessage());
+        } catch (NoSuchPaddingException e) {
+            throw new StringCryptException("Padding algorithm " + PKALGORITHM + " not available. " + e.getMessage());
+        } catch (InvalidKeyException e) {
+            throw new StringCryptException("Invalid public key. " + e.getMessage());
+        } catch (IllegalBlockSizeException e) {
+            throw new StringCryptException("Invalid block size. " + e.getMessage());
+        } catch (BadPaddingException e) {
+            throw new StringCryptException("Bad padding. " + e.getMessage());
+        }
 
-            // decrpyt message with symmetric key
+        // decrpyt message with symmetric key
+        try {
             Cipher cipher = Cipher.getInstance(SKALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, symmetricKey);
             final byte[] decrypedBytes = cipher.doFinal(cryptPackage.getEncryptedMessage());
             decrypedString = new String(decrypedBytes);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            throw new StringCryptException("Public key algorithm " + PKALGORITHM + " not available. " + e.getMessage());
+        } catch (NoSuchPaddingException e) {
+            throw new StringCryptException("Padding algorithm " + PKALGORITHM + " not available. " + e.getMessage());
+        } catch (InvalidKeyException e) {
+            throw new StringCryptException("Invalid public key. " + e.getMessage());
+        } catch (IllegalBlockSizeException e) {
+            throw new StringCryptException("Invalid block size. " + e.getMessage());
+        } catch (BadPaddingException e) {
+            throw new StringCryptException("Bad padding. " + e.getMessage());
         }
 
         return decrypedString;
@@ -94,13 +140,13 @@ public class StringCrypt {
      * Create RSA key pair
      * @return KeyPair
      */
-    public KeyPair createKeyPair() {
+    public KeyPair createKeyPair() throws StringCryptException {
         KeyPairGenerator kpg = null;
         try {
             kpg = KeyPairGenerator.getInstance("RSA");
             kpg.initialize(KEYLENGTH);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            throw new StringCryptException("Public key algorithm " + PKALGORITHM + " not available. " + e.getMessage());
         }
         return kpg.genKeyPair();
     }
@@ -109,16 +155,11 @@ public class StringCrypt {
      * Generate secret symmetric session key
      * @return SecretKey
      */
-    private SecretKey generateRandomKey() {
+    private SecretKey generateRandomKey() throws StringCryptException {
         SecureRandom random = new SecureRandom();
-        try {
-            final byte[] rawKey = new byte[24];
-            random.nextBytes(rawKey);
-            return generateKey(rawKey);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        final byte[] rawKey = new byte[24];
+        random.nextBytes(rawKey);
+        return generateKey(rawKey);
     }
 
     /**
@@ -126,15 +167,18 @@ public class StringCrypt {
      * @param rawKey
      * @return SecretKey
      */
-    private SecretKey generateKey(byte[] rawKey) {
+    private SecretKey generateKey(byte[] rawKey) throws StringCryptException {
         try {
             final DESedeKeySpec keyspec = new DESedeKeySpec(rawKey);
             final SecretKeyFactory keyfactory = SecretKeyFactory.getInstance("DESede");
             return keyfactory.generateSecret(keyspec);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            throw new StringCryptException("Symmetric key algorithm DESede not available. " + e.getMessage());
+        } catch (InvalidKeyException e) {
+            throw new StringCryptException("Invalid public key. " + e.getMessage());
+        } catch (InvalidKeySpecException e) {
+            throw new StringCryptException("Invalid key spec. " + e.getMessage());
         }
-        return null;
     }
 
     /**

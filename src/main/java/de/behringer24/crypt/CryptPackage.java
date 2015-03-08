@@ -33,7 +33,7 @@ public class CryptPackage {
      * Construct from packed base64 encoded string
      * @param input
      */
-    public CryptPackage(String input) {
+    public CryptPackage(String input) throws StringCryptException {
         final byte[] inputBytes = Base64.decode(input, Base64.DEFAULT);
         final DataInputStream stream = new DataInputStream(new ByteArrayInputStream(inputBytes));
 
@@ -61,7 +61,7 @@ public class CryptPackage {
      * Convert whole crypt package into byte array
      * @return byte[]
      */
-    public byte[] toByteArray() {
+    public byte[] toByteArray() throws StringCryptException {
         final ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
         try {
@@ -71,7 +71,7 @@ public class CryptPackage {
             dataOutputStream.writeInt(encryptedSymmetricKey.length);
             dataOutputStream.write(encryptedSymmetricKey);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new StringCryptException("Error creating byte stream for CryptPackage");
         }
 
         return stream.toByteArray();
@@ -81,8 +81,13 @@ public class CryptPackage {
      * Convert whole crypt package into base64 encoded string
      * @return String
      */
-    public String toString() {
-        return Base64.encodeToString(toByteArray(), Base64.DEFAULT);
+    public String toString()  {
+        try {
+            return Base64.encodeToString(toByteArray(), Base64.DEFAULT);
+        } catch (StringCryptException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**
@@ -90,7 +95,7 @@ public class CryptPackage {
      * @param stream
      * @return byte[]
      */
-    private byte[] readByteArray(DataInputStream stream)  {
+    private byte[] readByteArray(DataInputStream stream) throws StringCryptException {
         int length = 0;
 
         try {
@@ -99,7 +104,7 @@ public class CryptPackage {
 
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new StringCryptException("Error in data stream: Missing length data. Probably not a valid CryptPackage?");
         }
 
         final byte[] bytes = new byte[length];
@@ -110,7 +115,7 @@ public class CryptPackage {
 
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new StringCryptException("Error in data stream: Wrong data length. Expected " + length + " bytes. Probably not a valid CryptPackage?");
         }
         return bytes;
     }
