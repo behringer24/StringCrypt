@@ -19,7 +19,7 @@ party can use the senders public key to verify the validity of the signature.
 StringCrypt crypt = new StringCrypt();
 
 // generate key pair for demonstration (or each party reads either from storage)
-KeyPair kp = crypt.createKeyPair();
+KeyPair kp = StringKeyTools.createKeyPair();
 Key privateKey = kp.getPrivate();
 Key publicKey = kp.getPublic();
 
@@ -40,7 +40,7 @@ String decryptedString = crypt.decrypt(newPackage, privateKey);
 StringSign sign = new StringSign();
 
 // generate key pair for demonstration (or each party reads either from storage)
-KeyPair kp = crypt.createKeyPair();
+KeyPair kp = StringKeyTools.createKeyPair();
 Key privateKey = kp.getPrivate();
 Key publicKey = kp.getPublic();
 
